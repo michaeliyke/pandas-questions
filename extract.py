@@ -12,7 +12,7 @@ from personal.setup import name_local_file as name_file, save_file as save
 
 
 PAGES: List[bs4.element.Tag] = []
-DOWNLOAD_PATH = Path("files/pages")
+DOWNLOAD_PATH = Path("files")
 BASE_URL = "https://stackoverflow.com"
 
 ROWS: List[Dict[str, Union[str, int, float, bool]]] = []
@@ -33,7 +33,6 @@ print("ALL FILES LOADED!")
 
 def extract_data():
   """Function to scrape a single page"""
-  questions = []
   global PAGES
 
   # We'll loop through the PAGES to get soup
@@ -41,36 +40,27 @@ def extract_data():
     questions_ = soup.find_all("div", class_="s-post-summary")
 
     for summary in questions_:
-      question = summary.find("a", class_="s-link").text
+      question = summary.find("a", class_="s-link")
       stats = summary.find_all("div", class_="s-post-summary--stats-item")
+
       url_path = question.get("href")
+      vote_count = stats[0].find(class_="s-post-summary--stats-item-number")
 
-      vote_count = stats[0].find(
-          class_="s-post-summary--stats-item-number").text
-
-      answers_count = stats[1].find(
-          class_="s-post-summary--stats-item-number").text
-
-      view_count = stats[2].find(
-          class_="s-post-summary--stats-item-number").text
+      answers_count = stats[1].find(class_="s-post-summary--stats-item-number")
+      view_count = stats[2].find(class_="s-post-summary--stats-item-number")
 
       row = {
           "url_path": f"{url_path}",
-          "question": f"{question}",
-          "answers": f"{answers_count}",
-          "views": f"{view_count}",
-          "votes": f"{vote_count}",
+          "question": f"{question.text.strip()}",
+          "answers": answers_count.text.strip(),
+          "views": view_count.text.strip(),
+          "votes": vote_count.text.strip(),
           "best_answer": {},
       }
 
-      questions.append(row)
-
-  if(not questions):
-    raise Exception("Data does not exist")
+      ROWS.append(row)
 
   PAGES = None
-  ROWS.extend(questions)
-
   return get_best_answer()
 
 
@@ -83,7 +73,7 @@ def get_best_answer() -> Dict[str, Union[str, int, bool]]:
   accepted_answer: Dict[str, Union[str, int, bool]]
 
   for row in ROWS:
-    url = f"{BASE_URL}{row['url_path']}"
+    url = f"{BASE_URL}/pages/{row['url_path']}"
     time.sleep(2)
     soup: bs4.BeautifulSoup = bs(requests.get(url).text, "html.parser")
     save(f"files\pages\{name_file()}.html")
