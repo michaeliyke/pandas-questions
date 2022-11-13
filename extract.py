@@ -15,7 +15,7 @@ PAGES: List[bs4.element.Tag] = []
 DOWNLOAD_PATH = Path("files")
 BASE_URL = "https://stackoverflow.com"
 
-ROWS: List[Dict[str, Union[str, int, float, bool]]] = []
+QUESTIONS: List[Dict[str, Union[str, int, float, bool]]] = []
 CSV_HEADERS: List[str] = []
 
 # LOAD PAGE FILES
@@ -58,7 +58,7 @@ def extract_data():
           "best_answer": {},
       }
 
-      ROWS.append(row)
+      QUESTIONS.append(row)
 
   PAGES = None
   return get_best_answer()
@@ -72,11 +72,11 @@ def get_best_answer() -> Dict[str, Union[str, int, bool]]:
   answers: List[Dict[str, Union[str, int, bool]]] = []
   accepted_answer: Dict[str, Union[str, int, bool]]
 
-  for row in ROWS:
-    url = f"{BASE_URL}/pages/{row['url_path']}"
-    time.sleep(2)
+  for row in QUESTIONS[:10]:
+    url = f"{BASE_URL}{row['url_path']}"
     soup: bs4.BeautifulSoup = bs(requests.get(url).text, "html.parser")
-    save(f"files\pages\{name_file()}.html")
+
+    save(f"files/pages/{name_file()}.html", str(soup))
     post: bs4.element.Tag
 
     for post in soup.select("div.post-layout"):
@@ -87,23 +87,27 @@ def get_best_answer() -> Dict[str, Union[str, int, bool]]:
       answer: Dict[str, Union[str, int, bool]] = {}
 
       answer["text"] = text
-      answer["vote_count"] = int(vote_count)
+      answer["vote_count"] = vote_count
       answer["accepted"] = False
 
       # If accepted_ is hidden, then it's not the accepted answer
-      if ("d-none" not in accepted_.get("class")):
+      if (accepted_ and "d-none" not in accepted_.get("class")):
         answer["accepted"] = True
-        accepted_answer = answer
 
+        accepted_answer = answer
       answers.append(answer)
 
+    time.sleep(60)
+
+  save("files/answers-data.json", json.dumps(answers, indent=2))
   answers.sort(key=sort_cb)
   most_voted = answers.pop()
 
   if(accepted_answer["text"] == ""):
     accepted_answer = most_voted
 
-  return accepted_answer
+  row["accepted_answer"] = accepted_answer
 
 
 extract_data()
+save("files/questions-data.json", json.dumps(QUESTIONS, indent=2))
