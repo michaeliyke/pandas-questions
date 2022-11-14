@@ -2,6 +2,7 @@
 
 import csv
 import json
+import random
 import bs4
 import time
 import requests
@@ -18,7 +19,7 @@ BASE_URL = "https://stackoverflow.com"
 QUESTIONS: List[Dict[str, Union[str, int, float, bool]]] = []
 CSV_HEADERS: List[str] = []
 
-# LOAD PAGE FILES
+print("\nLOADING PAGE FILES")
 for _path in DOWNLOAD_PATH.iterdir():
   if _path.suffix != ".html":
     continue
@@ -28,7 +29,7 @@ for _path in DOWNLOAD_PATH.iterdir():
   with open(_path.resolve(), "r", encoding="UTF-8") as _file:
     PAGES.append(bs(_file.read(), "html.parser"))
     print(_file.name, "has been loaded!")
-print("ALL FILES LOADED!")
+print("SUCCESSFUL!\n")
 
 
 def extract_data():
@@ -36,6 +37,7 @@ def extract_data():
   global PAGES
 
   # We'll loop through the PAGES to get soup
+  print("\nLOADING QUESTIONS TO MEMORY")
   for soup in PAGES:
     questions_ = soup.find_all("div", class_="s-post-summary")
 
@@ -60,6 +62,7 @@ def extract_data():
 
       QUESTIONS.append(row)
 
+  print("SUCCESSFUL!\n")
   PAGES = None
   return get_best_answer()
 
@@ -72,42 +75,51 @@ def get_best_answer() -> Dict[str, Union[str, int, bool]]:
   answers: List[Dict[str, Union[str, int, bool]]] = []
   accepted_answer: Dict[str, Union[str, int, bool]]
 
-  for row in QUESTIONS[:10]:
-    url = f"{BASE_URL}{row['url_path']}"
+  print("\nGETTING: BEST ANSWER FOR QUESTION")
+  # for question in QUESTIONS[:10]:
+  for question in QUESTIONS:
+    url = f"{BASE_URL}{question['url_path']}"
+    time.sleep(10 + random.randrange(10, 61, random.randrange(1, 10, 2)))
+
     soup: bs4.BeautifulSoup = bs(requests.get(url).text, "html.parser")
-
     save(f"files/pages/{name_file()}.html", str(soup))
+
     post: bs4.element.Tag
-
     for post in soup.select("div.post-layout"):
-      text = post.select_one("div.s-prose p:first-of-type").text.strip()
+      text_o = post.select_one("div.s-prose p:first-of-type")
 
-      vote_count = post.select_one("div.js-vote-count").text.strip()
+      text = text_o.text.strip() if(text_o) else ""
+      vote_count_o = post.select_one("div.js-vote-count")
+      vote_count = vote_count_o.text.strip() if(vote_count_o) else "0"
+
       accepted_: bs4.Tag = post.select_one("div[aria-label='Accepted']")
       answer: Dict[str, Union[str, int, bool]] = {}
 
       answer["text"] = text
       answer["vote_count"] = vote_count
       answer["accepted"] = False
+      answer["question"] = question["question"]
 
       # If accepted_ is hidden, then it's not the accepted answer
       if (accepted_ and "d-none" not in accepted_.get("class")):
         answer["accepted"] = True
-
         accepted_answer = answer
+
       answers.append(answer)
 
-    time.sleep(60)
-
+  print("SUCCESSFUL!\n")
   save("files/answers-data.json", json.dumps(answers, indent=2))
+
   answers.sort(key=sort_cb)
   most_voted = answers.pop()
 
   if(accepted_answer["text"] == ""):
     accepted_answer = most_voted
 
-  row["accepted_answer"] = accepted_answer
+  question["best_answer"] = accepted_answer
 
 
 extract_data()
 save("files/questions-data.json", json.dumps(QUESTIONS, indent=2))
+
+print("ALL DONE!!!")
