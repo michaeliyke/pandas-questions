@@ -1,4 +1,5 @@
-import requests, time
+import requests
+import time
 from personal.setup import name_local_file as name_file, save_file as save
 
 URL = "https://stackoverflow.com/questions/tagged/pandas"
@@ -16,19 +17,18 @@ def save_page(page=1):
   """Function to save a single page to disk"""
   time.sleep(2)
   response = requests.get(build_url(page=page))
+  file_name = "-".join(URL.split("/")[-2:]) + f"-{page}.html"
 
-  file_name = "{}.html".format(name_file())
   save(file_name, response.text)
-  print(file_name, "saved!")
 
 
 def initiate():
   """Function to page download/save to PAGE_LIMIT"""
   print("Starting page download!")
-  
+
   for i in range(1, PAGE_LIMIT + 1):
     save_page(page=i)
-  
+
   print("Download completed!")
 
 

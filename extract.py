@@ -9,7 +9,7 @@ import requests
 from bs4 import BeautifulSoup as bs
 from typing import List, Dict, Union
 from pathlib import Path
-from personal.setup import name_local_file as name_file, save_file as save
+from personal.setup import name_local_file as name_file, save_file as save, recover_file
 
 
 PAGES: List[bs4.element.Tag] = []
@@ -17,6 +17,8 @@ DOWNLOAD_PATH = Path("files")
 BASE_URL = "https://stackoverflow.com"
 
 QUESTIONS: List[Dict[str, Union[str, int, float, bool]]] = []
+QU = []
+ANSWERS: List[Dict[str, Union[str, int, bool]]] = []
 CSV_HEADERS: List[str] = []
 
 print("\nLOADING PAGE FILES")
@@ -63,62 +65,76 @@ def extract_data():
       QUESTIONS.append(row)
 
   print("SUCCESSFUL!\n")
-  PAGES = None
-  return get_best_answer()
+  # PAGES = None
+  return get_answers()
 
 
 def sort_cb(answer: Dict[str, Union[str, int, bool]]) -> int:
   return answer["vote_count"]
 
 
-def get_best_answer() -> Dict[str, Union[str, int, bool]]:
-  answers: List[Dict[str, Union[str, int, bool]]] = []
-  accepted_answer: Dict[str, Union[str, int, bool]]
+def answers_restore(file_path) -> Union[bs4.BeautifulSoup, None]:
+  _path = Path(file_path)
+  if(not _path.exists()):
+    return None
+
+  print()
+  return bs(recover_file(_path.resolve()), "html.parser")
+
+
+def get_best(soup: bs4.BeautifulSoup) -> Dict[str, Union[str, int, bool, float]]:
+  post: bs4.element.Tag
+  best_answer: Dict[str, Union[str, int, bool, float]] = {}
+
+  for post in soup.select("div.post-layout"):
+    text_o = post.select_one("div.s-prose p:first-of-type")
+
+    text = text_o.text.strip() if(text_o) else ""
+    vote_count_o = post.select_one("div.js-vote-count")
+    vote_count = vote_count_o.text.strip() if(vote_count_o) else "0"
+
+    accepted_: bs4.Tag = post.select_one("div[aria-label='Accepted']")
+    answer: Dict[str, Union[str, int, bool]] = {}
+
+    answer["text"] = text
+    answer["vote_count"] = vote_count
+    answer["accepted"] = False
+
+    # If accepted_ is hidden, then it's not the accepted answer
+    if (accepted_ and "d-none" not in accepted_.get("class")):
+      answer["accepted"] = True
+      best_answer = answer
+
+    ANSWERS.append(answer)
+
+  save("files/answers-data.json", json.dumps(ANSWERS, indent=2))
+  ANSWERS.sort(key=sort_cb)
+  most_voted = ANSWERS.pop()
+
+  if (not best_answer or best_answer["text"] == ""):
+    best_answer = most_voted
+  return best_answer
+
+
+def get_answers() -> Dict[str, Union[str, int, bool]]:
 
   print("\nGETTING: BEST ANSWER FOR QUESTION")
-  # for question in QUESTIONS[:10]:
-  for question in QUESTIONS:
+  index: int
+  # for index, question in enumerate(QUESTIONS[:4]):
+  for index, question in enumerate(QUESTIONS):
     tem = "-".join(list(reversed(question['url_path'].split("/")[2:])))
-
     url = f"{BASE_URL}{question['url_path']}"
-    time.sleep(10 + random.randrange(7, 20, random.randrange(1, 7, 2)))
 
-    soup: bs4.BeautifulSoup = bs(requests.get(url).text, "html.parser")
-    save(f"files/pages/{tem}.html", str(soup))
+    # Restore from disk or download afresh
+    soup: bs4.BeautifulSoup = answers_restore(f"files/pages/{tem}.html")
 
-    post: bs4.element.Tag
-    best_answer: Dict[str, Union[str, int, bool, float]]
+    if(not soup):
+      time.sleep(10 + random.randrange(7, 20, random.randrange(1, 7, 2)))
+      soup = bs(requests.get(url).text, "html.parser")
+      save(f"files/pages/{tem}.html", str(soup))
 
-    for post in soup.select("div.post-layout"):
-      text_o = post.select_one("div.s-prose p:first-of-type")
-
-      text = text_o.text.strip() if(text_o) else ""
-      vote_count_o = post.select_one("div.js-vote-count")
-      vote_count = vote_count_o.text.strip() if(vote_count_o) else "0"
-
-      accepted_: bs4.Tag = post.select_one("div[aria-label='Accepted']")
-      answer: Dict[str, Union[str, int, bool]] = {}
-
-      answer["text"] = text
-      answer["vote_count"] = vote_count
-      answer["accepted"] = False
-      answer["question"] = question["question"]
-
-      # If accepted_ is hidden, then it's not the accepted answer
-      if (accepted_ and "d-none" not in accepted_.get("class")):
-        answer["accepted"] = True
-        best_answer = answer
-
-      answers.append(answer)
-
-  save("files/answers-data.json", json.dumps(answers, indent=2))
-  answers.sort(key=sort_cb)
-  most_voted = answers.pop()
-
-  if(best_answer["text"] == ""):
-    best_answer = most_voted
-
-  question["best_answer"] = best_answer["text"]
+    best_answer = get_best(soup)
+    QUESTIONS[index]["best_answer"] = best_answer["text"]
   print("SUCCESSFUL!\n")
 
 
