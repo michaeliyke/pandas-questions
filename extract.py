@@ -57,7 +57,7 @@ def extract_data():
           "answers": answers_count.text.strip(),
           "views": view_count.text.strip(),
           "votes": vote_count.text.strip(),
-          "best_answer": {},
+          "best_answer": "",
       }
 
       QUESTIONS.append(row)
@@ -78,13 +78,17 @@ def get_best_answer() -> Dict[str, Union[str, int, bool]]:
   print("\nGETTING: BEST ANSWER FOR QUESTION")
   # for question in QUESTIONS[:10]:
   for question in QUESTIONS:
+    tem = "-".join(list(reversed(question['url_path'].split("/")[2:])))
+
     url = f"{BASE_URL}{question['url_path']}"
-    time.sleep(10 + random.randrange(10, 61, random.randrange(1, 10, 2)))
+    time.sleep(10 + random.randrange(7, 20, random.randrange(1, 7, 2)))
 
     soup: bs4.BeautifulSoup = bs(requests.get(url).text, "html.parser")
-    save(f"files/pages/{name_file()}.html", str(soup))
+    save(f"files/pages/{tem}.html", str(soup))
 
     post: bs4.element.Tag
+    best_answer: Dict[str, Union[str, int, bool, float]]
+
     for post in soup.select("div.post-layout"):
       text_o = post.select_one("div.s-prose p:first-of-type")
 
@@ -103,20 +107,19 @@ def get_best_answer() -> Dict[str, Union[str, int, bool]]:
       # If accepted_ is hidden, then it's not the accepted answer
       if (accepted_ and "d-none" not in accepted_.get("class")):
         answer["accepted"] = True
-        accepted_answer = answer
+        best_answer = answer
 
       answers.append(answer)
 
-  print("SUCCESSFUL!\n")
   save("files/answers-data.json", json.dumps(answers, indent=2))
-
   answers.sort(key=sort_cb)
   most_voted = answers.pop()
 
-  if(accepted_answer["text"] == ""):
-    accepted_answer = most_voted
+  if(best_answer["text"] == ""):
+    best_answer = most_voted
 
-  question["best_answer"] = accepted_answer
+  question["best_answer"] = best_answer["text"]
+  print("SUCCESSFUL!\n")
 
 
 extract_data()
