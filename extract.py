@@ -1,6 +1,6 @@
 """Load all downloaded files and extract data: JSON and """
 
-import csv
+import uuid
 import json
 import random
 import bs4
@@ -9,7 +9,7 @@ import requests
 from bs4 import BeautifulSoup as bs
 from typing import List, Dict, Union
 from pathlib import Path
-from personal.setup import name_local_file as name_file, save_file as save, recover_file
+from personal.setup import save_file as save, recover_file
 
 
 PAGES: List[bs4.element.Tag] = []
@@ -53,6 +53,8 @@ def extract_data():
       answers_count = stats[1].find(class_="s-post-summary--stats-item-number")
       view_count = stats[2].find(class_="s-post-summary--stats-item-number")
 
+      UUID: uuid.UUID = uuid.uuid4()
+
       row = {
           "url_path": f"{url_path}",
           "question": f"{question.text.strip()}",
@@ -60,6 +62,7 @@ def extract_data():
           "views": view_count.text.strip(),
           "votes": vote_count.text.strip(),
           "best_answer": "",
+          "uuid": f"{UUID}",
       }
 
       QUESTIONS.append(row)
