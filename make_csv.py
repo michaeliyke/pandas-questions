@@ -15,3 +15,4 @@ def load_json(f_path: str) -> Union[List[Dict], Dict]:
 
 
 p.write_csv(load_json("files/questions-data.json"), "out/questions-data.csv")
+p.write_csv(load_json("files/answers-data.json"), "out/answers-data.csv")

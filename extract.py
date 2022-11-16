@@ -107,9 +107,8 @@ def get_best(soup: bs4.BeautifulSoup) -> Dict[str, Union[str, int, bool, float]]
 
     ANSWERS.append(answer)
 
-  save("files/answers-data.json", json.dumps(ANSWERS, indent=2))
   ANSWERS.sort(key=sort_cb)
-  most_voted = ANSWERS.pop()
+  most_voted = ANSWERS[-1]
 
   if (not best_answer or best_answer["text"] == ""):
     best_answer = most_voted
@@ -139,6 +138,7 @@ def get_answers() -> Dict[str, Union[str, int, bool]]:
 
 
 extract_data()
+save("files/answers-data.json", json.dumps(ANSWERS, indent=2))
 save("files/questions-data.json", json.dumps(QUESTIONS, indent=2))
 
 print("ALL DONE!!!")
