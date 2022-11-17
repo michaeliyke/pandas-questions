@@ -13,8 +13,8 @@ for index, row in enumerate(ROWS):
   mis_type = typo.StrErrer(row["question"], seed=2)
 
   ROWS[index]["question"] = mis_type.missing_char().result
-  ROWS[index]["question_uuid"] = ROWS[index]["uuid"]
-  ROWS[index]["uuid"] = f"{UUID}"
+  ROWS[index]["question_id"] = ROWS[index]["id"]
+  ROWS[index]["id"] = f"{UUID}"
 
 p.write_csv(ROWS, "out/questions-data-typos.csv")
 p.write_json(ROWS, "files/questions-data-typos.json")

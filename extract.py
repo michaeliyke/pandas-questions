@@ -62,7 +62,7 @@ def extract_data():
           "views": view_count.text.strip(),
           "votes": vote_count.text.strip(),
           "best_answer": "",
-          "uuid": f"{UUID}",
+          "id": f"{UUID}",
       }
 
       QUESTIONS.append(row)
@@ -85,7 +85,7 @@ def answers_restore(file_path) -> Union[bs4.BeautifulSoup, None]:
   return bs(recover_file(_path.resolve()), "html.parser")
 
 
-def get_best(soup: bs4.BeautifulSoup) -> Dict[str, Union[str, int, bool, float]]:
+def get_best(soup: bs4.BeautifulSoup, row: Dict) -> Dict:
   post: bs4.element.Tag
   best_answer: Dict[str, Union[str, int, bool, float]] = {}
 
@@ -102,6 +102,8 @@ def get_best(soup: bs4.BeautifulSoup) -> Dict[str, Union[str, int, bool, float]]
     answer["text"] = text
     answer["vote_count"] = vote_count
     answer["accepted"] = False
+    answer["question_id"] = row["id"]
+    answer["id"] = f"{uuid.uuid4()}"
 
     # If accepted_ is hidden, then it's not the accepted answer
     if (accepted_ and "d-none" not in accepted_.get("class")):
@@ -135,7 +137,7 @@ def get_answers() -> Dict[str, Union[str, int, bool]]:
       soup = bs(requests.get(url).text, "html.parser")
       save(f"files/pages/{tem}.html", str(soup))
 
-    best_answer = get_best(soup)
+    best_answer = get_best(soup, question)
     QUESTIONS[index]["best_answer"] = best_answer["text"]
   print("SUCCESSFUL!\n")
 
